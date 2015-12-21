@@ -1,4 +1,6 @@
 
+; Finds operands that are marked as 'in-ops' by analysis to be CF_USE
+
 (define (-use-flags-for-insn insn)
   (let ((vals (map (lambda (ifld) (ifld-get-value ifld)) (insn-iflds insn)))
     (inops (sfmt-in-ops (insn-sfmt insn))))
@@ -15,6 +17,8 @@
     )
   )
 )
+
+; Finds operands that are marked as 'out-ops' by analysis to be CF_CHG
 
 (define (-chg-flags-for-insn insn)
   (let ((vals (map (lambda (ifld) (ifld-get-value ifld)) (insn-iflds insn)))
@@ -54,7 +58,8 @@
   )
 )
 
-; assigns a number to each operand to refer to in the IDP
+; assigns a number to each operand in the instruction for use with op_t
+
 (define (-number-operands! insn)
   (let ((count 0))
     (map (lambda (ifld)
@@ -74,11 +79,11 @@
 (define (-gen-insn-list)
   (logit 2 "Generating instructions list ...\n")
   (let* ((all-attrs (current-insn-attr-list))
-   (num-non-bools (attr-count-non-bools all-attrs))
    (all-insn (non-multi-insns (current-insn-list))))
     (map -number-operands! all-insn)
     (string-write
-     "instruc_t Instructions[] = {\n"
+     "instruc_t Instructions[] = {
+  { \"\", 0 }, // unknown\n"
 
      (lambda ()
        (string-write-map (lambda (insn)
@@ -92,7 +97,19 @@
 )
 
 (define (-gen-insn-enum)
-  (string-write "hello\n")
+  (logit 2 "Generating instructions enum ...\n")
+  (let* ((all-attrs (current-insn-attr-list))
+   (all-insn (non-multi-insns (current-insn-list))))
+    (string-write
+     "enum nameNum ENUM_SIZE(uint16)
+{
+  " (gen-insn-enum "UNKNOWN") " = 0, \n"
+
+     (map (lambda (insn) (string-append "  " (insn-enum insn) ", \n")) all-insn)
+
+     "};\n"
+     )
+    )
 )
 
 ; Entry point.
@@ -109,7 +126,7 @@
   ;(rtl-c-config! #:rtl-cover-fns? #t)
 
   (string-write
-   (gen-c-copyright "IDP instructions"
+   (gen-c-copyright "@ARCH@ IDP instructions"
       CURRENT-COPYRIGHT CURRENT-PACKAGE)
    "\
 #include <ida.hpp>
@@ -132,7 +149,7 @@
   ;(rtl-c-config! #:rtl-cover-fns? #t)
 
   (string-write
-   (gen-c-copyright "IDP instructions"
+   (gen-c-copyright "@ARCH@ IDP instructions"
       CURRENT-COPYRIGHT CURRENT-PACKAGE)
     "\
 #ifndef __INSTRS_HPP
