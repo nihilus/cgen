@@ -18,6 +18,7 @@
   (load (string-append srcdir "/idp.scm"))
   (load (string-append srcdir "/idp-ana.scm"))
   (load (string-append srcdir "/idp-ins.scm"))
+  (load (string-append srcdir "/idp-reg.scm"))
 )
 
 (define opc-arguments

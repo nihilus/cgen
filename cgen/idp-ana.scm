@@ -21,8 +21,8 @@
     (if (>= order 0)
       (string-append 
         "    " cmd-op ".type = o_reg;\n"
-        "    " cmd-op ".reg = "
-        (gen-sym (op:type op)) " + "
+        "    " cmd-op ".reg = REGS_"
+        (string-upcase (hw-enum self)) "_BASE + "
         (gen-extracted-ifld-value (op-ifield op))
         ";\n")
       ""
