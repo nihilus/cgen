@@ -13,18 +13,34 @@
 ; String containing text defining the package we're generating code for.
 (define CURRENT-PACKAGE #f)
 
+; #t if the scache is being used
+(define /with-scache? #f)
+(define (with-scache?) /with-scache?)
+
 ; Initialize the options.
 
 (define (option-init!)
+  (set! /with-scache? #f)
   (set! CURRENT-COPYRIGHT copyright-fsf)
   (set! CURRENT-PACKAGE package-gnu-binutils-gdb)
   *UNSPECIFIED*
 )
 
+; #t if the cpu can execute insns parallely.
+; This one isn't passed on the command line, but we follow the convention
+; of prefixing these things with `with-'.
+; While processing operand reading (or writing), parallel execution support
+; needs to be turned off, so it is up to the appropriate cgen-foo.c proc to
+; set-with-parallel?! appropriately.
+(define /with-parallel? #f)
+(define (with-parallel?) /with-parallel?)
+(define (set-with-parallel?! flag) (set! /with-parallel? flag))
+
 ; Handle an option passed in from the command line.
 
 (define (option-set! name value)
   (case name
+    ((with-scache) (set! /with-scache? #t))
     ((copyright) (cond ((equal?  value '("fsf"))
 			(set! CURRENT-COPYRIGHT copyright-fsf))
 		       ((equal? value '("redhat"))
@@ -47,6 +63,7 @@
 ; Initialize any opcodes specific things before loading the .cpu file.
 
 (define (idp-init!)
+  (sim-init!)
   (desc-init!)
   (mode-set-biggest-word-bitsizes!)
   *UNSPECIFIED*
@@ -57,6 +74,7 @@
 ; consistency checks in between.
 
 (define (idp-finish!)
+  (sim-finish!)
   (desc-finish!)
   *UNSPECIFIED*
 )
@@ -66,6 +84,7 @@
 ; a .cpu file is loaded.
 
 (define (idp-analyze!)
+  (sim-analyze!)
   (desc-analyze!)
 
   ; Initialize the rtl->c translator.
@@ -83,3 +102,39 @@
 )
 
 
+
+; assigns a number to each operand in the instruction for use with op_t
+
+(define (set-insn-operand-order! insn)
+  (logit 3 "ordering operands for " (insn-syntax insn) "\n")
+  (let ((count 0)
+    (sfmt (insn-sfmt insn)))
+    (map (lambda (ifld)
+      (if (operand? (ifld-get-value ifld))
+        (let ((op1 (ifld-get-value ifld)))
+          (logit 3 "assign " (number->string count) " to " (op:sem-name op1) "\n")
+          (op:set-order! op1 count)
+          ; hack to update the sfmt fields too
+          (if sfmt
+            (for-each (lambda (op2)
+              (if (equal? (op:sem-name op2) (op:sem-name op1))
+                (op:set-order! op2 count)
+              ))
+              (append (sfmt-in-ops sfmt) (sfmt-out-ops sfmt))
+            )
+          )
+          (set! count (+ count 1))
+        )
+      )
+    )
+    (insn-iflds insn))
+  )
+)
+
+; finds the assigned number for an op_t in a instru_t
+
+(define (find-operand-number insn op)
+  (op:num (find (lambda (ifld))
+    (and (operand? (ifld-get-value ifld)) (equal? (op:sem-name (ifld-get-value ifld)) (op:sem-name op)))
+  ) (insn-iflds insn))
+)

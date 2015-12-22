@@ -5,8 +5,8 @@
   (let ((vals (map (lambda (ifld) (ifld-get-value ifld)) (insn-iflds insn)))
     (inops (sfmt-in-ops (insn-sfmt insn))))
     (string-list-map (lambda (opc)
-      (logit 3 "in-op " (number->string (op:num opc)) ": " (op:hw-name opc) "\n")
-      (string-append "CF_USE" (number->string (op:num opc))))
+      (logit 3 "in-op " (number->string (op:order opc)) ": " (op:hw-name opc) "\n")
+      (string-append "CF_USE" (number->string (op:order opc))))
       (filter (lambda (val) 
         (not (null? (find (lambda (op)
           (and (operand? val) (equal? (op:sem-name val) (op:sem-name op))))
@@ -24,8 +24,8 @@
   (let ((vals (map (lambda (ifld) (ifld-get-value ifld)) (insn-iflds insn)))
     (outops (sfmt-out-ops (insn-sfmt insn))))
     (string-list-map (lambda (opc)
-      (logit 3 "out-op " (number->string (op:num opc)) ": " (op:hw-name opc) "\n")
-      (string-append "CF_CHG" (number->string (op:num opc))))
+      (logit 3 "out-op " (number->string (op:order opc)) ": " (op:hw-name opc) "\n")
+      (string-append "CF_CHG" (number->string (op:order opc))))
       (filter (lambda (val) 
         (not (null? (find (lambda (op)
           (and (operand? val) (equal? (op:sem-name val) (op:sem-name op))))
@@ -45,7 +45,7 @@
   (let* ((flags (append (-use-flags-for-insn insn) (-chg-flags-for-insn insn))))
     (string-append
       "  { \""
-      (gen-sym insn)
+      (insn-mnemonic insn)
       "\",    "
       (if (null? flags)
         "0"
@@ -58,29 +58,13 @@
   )
 )
 
-; assigns a number to each operand in the instruction for use with op_t
-
-(define (-number-operands! insn)
-  (let ((count 0))
-    (map (lambda (ifld)
-      (if (operand? (ifld-get-value ifld))
-        (begin
-          (op:set-num! (ifld-get-value ifld) count)
-          (set! count (+ count 1))
-        )
-      )
-    )
-    (insn-iflds insn))
-  )
-)
-
 ; Generate instruc_t entries for all instructions
 
 (define (-gen-insn-list)
   (logit 2 "Generating instructions list ...\n")
   (let* ((all-attrs (current-insn-attr-list))
    (all-insn (non-multi-insns (current-insn-list))))
-    (map -number-operands! all-insn)
+    (map set-insn-operand-order! all-insn)
     (string-write
      "instruc_t Instructions[] = {
   { \"\", 0 }, // unknown\n"
@@ -101,13 +85,13 @@
   (let* ((all-attrs (current-insn-attr-list))
    (all-insn (non-multi-insns (current-insn-list))))
     (string-write
-     "enum nameNum ENUM_SIZE(uint16)
+     "typedef enum nameNum ENUM_SIZE(uint16)
 {
   " (gen-insn-enum "UNKNOWN") " = 0, \n"
 
-     (map (lambda (insn) (string-append "  " (insn-enum insn) ", \n")) all-insn)
+     (map (lambda (insn) (string-append "  " (gen-cpu-insn-enum (current-cpu) insn) ", \n")) all-insn)
 
-     "};\n"
+     "} @PREFIX@_INSN_TYPE;\n"
      )
     )
 )
@@ -157,6 +141,7 @@
 
 extern instruc_t Instructions[];
 \n"
+  ; (gen-cpu-insn-enum-decl (current-cpu) (non-multi-insns (current-insn-list))) ; not used because we need UINT16
    -gen-insn-enum
    "\
 #endif

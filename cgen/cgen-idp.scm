@@ -9,9 +9,14 @@
 
 (define (load-files srcdir)
   (load (string-append srcdir "/read.scm"))
+  (load (string-append srcdir "/utils-sim.scm"))
+  (load (string-append srcdir "/sim.scm"))
+  (load (string-append srcdir "/sim-decode.scm"))
+  (load (string-append srcdir "/sim-model.scm"))
   (load (string-append srcdir "/desc.scm"))
   (load (string-append srcdir "/desc-cpu.scm"))
   (load (string-append srcdir "/idp.scm"))
+  (load (string-append srcdir "/idp-ana.scm"))
   (load (string-append srcdir "/idp-ins.scm"))
 )
 
