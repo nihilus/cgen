@@ -47,7 +47,7 @@
           (if (not (null? decls))
             (let ((len (length decls)))
               (logit 3 "found register list " (->string decls) "\n")
-              (set! decls (append (string-list "#define REGS_" (string-upcase (hw-enum hw)) "_BASE " (number->string counter) "\n") decls))
+              (set! decls (cons (string-append "#define REGS_" (string-upcase (hw-enum hw)) "_BASE " (number->string counter) "\n") decls))
               (set! counter (+ counter len))
               decls
             )
