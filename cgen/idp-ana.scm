@@ -58,12 +58,15 @@
 (method-make!
  <hw-immediate> 'gen-extract
  (lambda (self op sfmt local?)
-  (let* ((order (op:order op))
+  (let* ((mode (hw-mode self))
+    (order (op:order op))
     (cmd-op (string-append "cmd.Op" (number->string (+ (op:order op) 1)))))
     (if (>= order 0)
       (string-append 
         "    " cmd-op ".type = o_imm;\n"
-        "    " cmd-op ".dtyp = dt_dword; // TODO: change to actual size\n"
+        "    " cmd-op ".dtyp = get_dtyp_by_size("
+        (number->string (mode:bytes mode))
+        ");\n"
         "    " cmd-op ".value = "
         (gen-extracted-ifld-value (op-ifield op))
         ";\n")
@@ -79,6 +82,22 @@
  <hw-pc> 'gen-extract
  (lambda (self op sfmt local?)
    (error "pc extraction unimplemented"))
+)
+
+; Instruction field extraction support cont'd.
+; Emit extraction section of decode function.
+
+; Return C code to record insn field data for <sformat> SFMT.
+; This is used when with-scache.
+
+(define (/gen-record-args sfmt)
+  (let ((operands (sfmt-extracted-operands sfmt))
+  (iflds (sfmt-needed-iflds sfmt)))
+    (string-list
+     "    /* Record the operands  */\n"
+     (string-list-map (lambda (op) (/gen-op-extract op sfmt #f))
+          operands)
+     ))
 )
 
 ; Return C code that extracts the fields of <sformat> SFMT.
@@ -198,21 +217,10 @@ int idaapi ana( void )
      (gen-c-copyright "@ARCH@ IDP instructions"
         CURRENT-COPYRIGHT CURRENT-PACKAGE)
       "\
+#include \"cgen.h\"
 #include <bytes.hpp>
 #include \"@arch@.hpp\"
-#include \"cgen.h\"
 
-#define FLD // no need for this macro here
-#ifdef CGEN_TRACE_EXTRACT
-#undef CGEN_TRACE_EXTRACT
-#endif
-#define CGEN_TRACE_EXTRACT(cpu, abuf, args) \
-do { \
-  DEBUG_TRACE args ; \
-} while (0)
-#define DEBUG_TRACE(cpu, pc, args...) \
-do { \
-} while (0)
   \n"
      (lambda () (/gen-ana-fn all-insn
               (state-decode-assist)
