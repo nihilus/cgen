@@ -133,8 +133,12 @@
 
 ; finds the assigned number for an op_t in a instru_t
 
-(define (find-operand-number insn op)
-  (op:num (find (lambda (ifld))
-    (and (operand? (ifld-get-value ifld)) (equal? (op:sem-name (ifld-get-value ifld)) (op:sem-name op)))
-  ) (insn-iflds insn))
+(define (find-operand-number insn name)
+  (let ((ifd (find-first (lambda (ifld)
+    (let ((val (ifld-get-value ifld)))
+      (and val (and (operand? val) (equal? (op:sem-name val) name)))
+    )) 
+    (insn-iflds insn))))
+    (if ifd (op:order (ifld-get-value ifd)) -1)
+  )
 )
