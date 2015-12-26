@@ -82,6 +82,9 @@
 
 		; The function unit usage of the instruction.
 		timing
+
+		; A ordered list of operand sem-names (in order of appearance in syntax)
+		(op-ordered . #f)
 		)
 	      nil)
 )
@@ -95,12 +98,12 @@
 
 (define-getters <insn> insn
   (syntax iflds ifield-assertion fmt-desc ifmt sfmt tmp
-	  semantics canonical-semantics compiled-semantics timing)
+	  semantics canonical-semantics compiled-semantics timing op-ordered)
 )
 
 (define-setters <insn> insn
   (fmt-desc ifmt sfmt tmp ifield-assertion
-   canonical-semantics compiled-semantics)
+   canonical-semantics compiled-semantics op-ordered)
 )
 
 ; Return a boolean indicating if X is an <insn>.
@@ -1046,6 +1049,29 @@
 		   (set! syntax (string-drop1 syntax))))
 	    (loop))))
     (reverse result))
+)
+
+; Creates the ordered list of operands
+
+(define (analyze-insn-op-order! insn)
+  (let* ((breakout (syntax-break-out (insn-syntax insn) (obj-isa-list insn)))
+    (op-order (filter operand? breakout)))
+    (insn-set-op-ordered! insn op-order)
+  )
+)
+
+; Returns order for an operand (by sem-name) or -1 if order not found
+
+(define (insn-op-order insn sem-name)
+  (let loop ((items (insn-op-ordered insn)) (counter 0))
+    (if (or (not items) (null? items))
+      -1
+      (if (equal? (op:sem-name (car items)) sem-name)
+        counter
+        (loop (cdr items) (+ counter 1))
+      )
+    )
+  )
 )
 
 ; Given a list of syntax elements (e.g. the result of syntax-break-out),

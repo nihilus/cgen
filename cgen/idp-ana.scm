@@ -6,25 +6,29 @@
 ; For the default case we use the ifield as is, which is output elsewhere.
 
 (method-make!
- <hardware-base> 'gen-extract
- (lambda (self op sfmt local?)
+ <hardware-base> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
    "")
 )
 
 ; Extract the necessary fields into ARGBUF.
 
 (method-make!
- <hw-register> 'gen-extract
- (lambda (self op sfmt local?)
-  (let* ((order (op:order op))
-    (cmd-op (string-append "cmd.Op" (number->string (+ (op:order op) 1)))))
+ <hw-register> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
+  (let* ((order (insn-op-order insn (op:sem-name op)))
+    (cmd-op (string-append "cmd.Op" (number->string (+ order 1)))))
     (if (>= order 0)
       (string-append 
         "    " cmd-op ".type = o_reg;\n"
         "    " cmd-op ".reg = REGS_"
         (string-upcase (hw-enum self)) "_BASE + "
         (gen-extracted-ifld-value (op-ifield op))
-        ";\n")
+        ";\n"
+        "    " cmd-op ".specval_shorts.low = @ARCH@_OPERAND_"
+        (string-upcase (gen-sym op))
+        ";\n"
+      )
       ""
     )
   )
@@ -34,33 +38,27 @@
 ; Extract the necessary fields into ARGBUF.
 
 (method-make!
- <hw-address> 'gen-extract
- (lambda (self op sfmt local?)
-   (string-append "  " (number->string (op:order op))
-      (if local?
-          (gen-hw-index-argbuf-name (op:index op))
-          (gen-hw-index-argbuf-ref (op:index op)))
-      " = "
-      (gen-extracted-ifld-value (op-ifield op))
-      ";\n"))
+ <hw-address> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
+   (error "addr extraction unimplemented"))
 )
 
 ; Extract iaddress
 
 (method-make!
- <hw-iaddress> 'gen-extract
- (lambda (self op sfmt local?)
+ <hw-iaddress> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
    (error "iaddr extraction unimplemented"))
 )
 
 ; Extract immediate
 
 (method-make!
- <hw-immediate> 'gen-extract
- (lambda (self op sfmt local?)
+ <hw-immediate> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
   (let* ((mode (hw-mode self))
-    (order (op:order op))
-    (cmd-op (string-append "cmd.Op" (number->string (+ (op:order op) 1)))))
+    (order (insn-op-order insn (op:sem-name op)))
+    (cmd-op (string-append "cmd.Op" (number->string (+ order 1)))))
     (if (>= order 0)
       (string-append 
         "    " cmd-op ".type = o_imm;\n"
@@ -69,7 +67,11 @@
         ");\n"
         "    " cmd-op ".value = "
         (gen-extracted-ifld-value (op-ifield op))
-        ";\n")
+        ";\n"
+        "    " cmd-op ".specval_shorts.low = @ARCH@_OPERAND_"
+        (string-upcase (gen-sym op))
+        ";\n"
+      )
       ""
     )
   )
@@ -79,9 +81,15 @@
 ; Extract pc
 
 (method-make!
- <hw-pc> 'gen-extract
- (lambda (self op sfmt local?)
+ <hw-pc> 'gen-ana-extract
+ (lambda (self insn op sfmt local?)
    (error "pc extraction unimplemented"))
+)
+
+; Stub for extracting operands
+
+(define (/gen-op-ana-extract insn op sfmt local?)
+  (send (op:type op) 'gen-ana-extract insn op sfmt local?)
 )
 
 ; Instruction field extraction support cont'd.
@@ -90,12 +98,12 @@
 ; Return C code to record insn field data for <sformat> SFMT.
 ; This is used when with-scache.
 
-(define (/gen-record-args sfmt)
+(define (/gen-ana-record-args insn sfmt)
   (let ((operands (sfmt-extracted-operands sfmt))
   (iflds (sfmt-needed-iflds sfmt)))
     (string-list
      "    /* Record the operands  */\n"
-     (string-list-map (lambda (op) (/gen-op-extract op sfmt #f))
+     (string-list-map (lambda (op) (/gen-op-ana-extract insn op sfmt #f))
           operands)
      ))
 )
@@ -124,13 +132,20 @@
    "\n"
    (gen-extract-ifields (sfmt-iflds sfmt) (sfmt-length sfmt) "    " #f)
    "\n"
-   (/gen-record-args sfmt)
+   (/gen-ana-record-args (sfmt-eg-insn sfmt) sfmt)
    "\n"
    ;(gen-undef-field-macro sfmt)
    "    cmd.size = " (number->string (/ (sfmt-length sfmt) 8)) ";\n"
    "    return " (number->string (/ (sfmt-length sfmt) 8)) ";\n"
    "  }\n\n"
    )
+)
+
+; For each format, return its extraction function.
+
+(define (/gen-all-extractors)
+  (logit 2 "Processing extractors ...\n")
+  (string-list-map /gen-extract-case (current-sfmt-list))
 )
 
 ; Generate top level ana function.
@@ -205,7 +220,7 @@ int idaapi ana( void )
   (logit 1 "Generating ana.cpp ...\n")
   (sim-analyze-insns!)
   (let* ((all-insn (real-insns (current-insn-list))))
-    (map set-insn-operand-order! all-insn)
+    (map analyze-insn-op-order! all-insn)
 
     ; Turn parallel execution support on if cpu needs it.
     (set-with-parallel?! (state-parallel-exec?))

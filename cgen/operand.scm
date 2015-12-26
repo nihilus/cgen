@@ -85,14 +85,8 @@
 		; description.  There is no relation between the number and
 		; where in the semantics the operand appears.  An operand that
 		; is both read and written are given separate ordinal numbers
-		; (inputs are treated separately from outputs). This field is not 
-        ; set unless done so explicitly.
+		; (inputs are treated separately from outputs).
 		(num . -1)
-
-        ; As opposed to 'num', 'order' IS related to where the operand appears.
-        ; Specifically, it is ordered by its appearence in the syntax, and 
-        ; two operands can share an order if they refer to the same element.
-        (order . -1)
 
 		; Boolean indicating if the operand is conditionally
 		; referenced.  #f means the operand is always referenced by
@@ -147,8 +141,6 @@
 (define op:setter (elm-make-getter <operand> 'setter))
 (define op:num (elm-make-getter <operand> 'num))
 (define op:set-num! (elm-make-setter <operand> 'num))
-(define op:order (elm-make-getter <operand> 'order))
-(define op:set-order! (elm-make-setter <operand> 'order))
 (define op:cond? (elm-make-getter <operand> 'cond?))
 (define op:set-cond?! (elm-make-setter <operand> 'cond?))
 (define op:delay (elm-make-getter <operand> 'delayed))

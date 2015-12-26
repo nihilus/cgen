@@ -50,21 +50,12 @@
 
 ; Registers.
 
-; We don't actually fetch the value, we just record the register that is 
-; being fetched and record the number of times register fetches happen.
-; If there is a memory access in the future, we know where to offset 
-; from (if there is only one register) or ignore (if there is more than one)
+; If any register is read, we "taint" the value produced and essentially 
+; force the emu function to return and not do any more processing
 
 (define (/hw-cxmake-emu-get hw estate mode index selector order)
-  (let ((mode (if (mode:eq? 'DFLT mode)
-      (send hw 'get-mode)
-      mode)))
-    ; Use zero as a default; note that a register is read and which to offset from
-    (cx:make mode
-      (string-append
-        "({ regreads++; opoff = " (number->string order) "; 0; })"
-      )
-    )
+  (cx:make mode
+    "({ break; 0 })"
   )
 )
 
@@ -94,16 +85,9 @@
        (if (not default-selector?) (error "selector not implemented"))
        (cx:make mode
          (string-append 
-            "({ val = "
+            "({ ua_add_dref(0, "
             (/gen-hw-index index estate)
-            ";\n"
-            "if (opoff >= 0 && regreads == 0) {\n"
-            "  ua_add_dref(0, val, dr_R);\n"
-            "} else if (opoff >= 0 && regreads == 1) {\n"
-            "  cmd.Operands[opoff].type = o_displ;\n"
-            "  cmd.Operands[opoff].addr = val;\n"
-            "  ua_add_off_drefs(&cmd.Operands[opoff], dr_R);\n"
-            "}; 0; })\n"
+            " , dr_R); 0; })\n"
          )
        )
    )
@@ -119,18 +103,9 @@
       (default-selector? (hw-selector-default? selector)))
        (if (not default-selector?) (error "selector not implemented"))
        (string-append 
-          "val = "
+          "ua_add_dref(0, "
           (/gen-hw-index index estate)
-          ";\n"
-          "if (opoff >= 0 && regreads == 0) {\n"
-          "  ua_add_dref(0, val, dr_W);\n"
-          "} else if (opoff >= 0 && regreads == 1) {\n"
-          "  cmd.Operands[opoff].type = o_displ;\n"
-          "  cmd.Operands[opoff].addr = val;\n"
-          "  ua_add_off_drefs(&cmd.Operands[opoff], dr_W);\n"
-          "}\n"
-          (cx:c newval)
-          ";\n"
+          " , dr_W);\n"
        )
    )
  )
@@ -212,7 +187,7 @@
     (hw (op:type self))
     (index (if index index (op:index self)))
     (idx (if index (/gen-hw-index index estate) ""))
-    (order (find-operand-number (estate-owner estate) (op:sem-name self)))
+    (order (insn-op-order (estate-owner estate) (op:sem-name self)))
     (idx-args (if (equal? idx "") "" (string-append ", " idx)))
     (selector (if selector selector (op:selector self)))
     (delayval (op:delay self))
@@ -270,7 +245,7 @@
    (let ((mode (if (mode:eq? 'DFLT mode)
        (send self 'get-mode)
        mode))
-       (order (find-operand-number (estate-owner estate) (op:sem-name self)))
+       (order (insn-op-order (estate-owner estate) (op:sem-name self)))
    (index (if index index (op:index self)))
    (selector (if selector selector (op:selector self))))
      (cond ((obj-has-attr? self 'RAW)
@@ -283,18 +258,10 @@
 ; and turn them into sequences. The user must manually remove unwanted paths.
 
 (define (s-if estate mode cond then . else)
-  (cx:make mode
-    (string-append
-      (cx:c (rtl-c-get estate DFLT cond))
-      ";\n"
-      (cx:c
-        (apply s-sequence
-              (cons estate
-                    (cons mode
-                    (cons nil (cons then else)))))
-      )
-    )
-  )
+  (apply s-sequence
+        (cons estate
+              (cons mode
+              (cons nil (cons then else))))) ; ignore the cond
 )
 
 (define (s-cond estate mode . cond-code-list)
@@ -363,9 +330,10 @@
      "  PCADDR pc = cmd.ea;\n"
      "  PCADDR npc = pc + " (number->string insn-len) ";\n"
      "  ea_t val;\n"
-     "\n"
+     "  do\n"
+     "  {\n"
      (gen-emu-code insn)
-     "\n"
+     "  } while (0);\n"
      "  if (!InstrIsSet(cmd.itype, CF_STOP))\n"
      "  {\n"
      "    ua_add_cref(0, npc, fl_F);\n"
@@ -426,7 +394,7 @@
   (rtl-c-config! #:rtl-cover-fns? #t)
 
   (let ((insns (scache-engine-insns)))
-    (map set-insn-operand-order! insns)
+    (map analyze-insn-op-order! insns)
     (string-write
      (gen-c-copyright "IDP emulator for @prefix@."
         copyright-red-hat package-red-hat-simulators)

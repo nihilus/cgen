@@ -101,44 +101,3 @@
   *UNSPECIFIED*
 )
 
-
-
-; assigns a number to each operand in the instruction for use with op_t
-
-(define (set-insn-operand-order! insn)
-  (logit 3 "ordering operands for " (insn-syntax insn) "\n")
-  (let ((count 0)
-    (sfmt (insn-sfmt insn)))
-    (map (lambda (ifld)
-      (if (operand? (ifld-get-value ifld))
-        (let ((op1 (ifld-get-value ifld)))
-          (logit 3 "assign " (number->string count) " to " (op:sem-name op1) "\n")
-          (op:set-order! op1 count)
-          ; hack to update the sfmt fields too
-          (if sfmt
-            (for-each (lambda (op2)
-              (if (equal? (op:sem-name op2) (op:sem-name op1))
-                (op:set-order! op2 count)
-              ))
-              (append (sfmt-in-ops sfmt) (sfmt-out-ops sfmt))
-            )
-          )
-          (set! count (+ count 1))
-        )
-      )
-    )
-    (insn-iflds insn))
-  )
-)
-
-; finds the assigned number for an op_t in a instru_t
-
-(define (find-operand-number insn name)
-  (let ((ifd (find-first (lambda (ifld)
-    (let ((val (ifld-get-value ifld)))
-      (and val (and (operand? val) (equal? (op:sem-name val) name)))
-    )) 
-    (insn-iflds insn))))
-    (if ifd (op:order (ifld-get-value ifd)) -1)
-  )
-)
