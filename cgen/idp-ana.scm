@@ -189,11 +189,13 @@ int idaapi ana( void )
   /* Result of decoder.  */
   @PREFIX@_INSN_TYPE itype;
 
+  CGEN_INSN_WORD insn;
+  CGEN_INSN_WORD entire_insn;
+  ea_t pc;
+  get_data_value(cmd.ea, &insn, " (number->string (/ decode-bitsize 8)) ");
+  get_data_value(cmd.ea, &entire_insn, " (number->string (/ max-bitsize 8)) ");
+  pc = cmd.ea;
   {
-    CGEN_INSN_WORD insn;
-    CGEN_INSN_WORD entire_insn;
-    get_data_value(cmd.ea, &insn, " (number->string (/ decode-bitsize 8)) ");
-    get_data_value(cmd.ea, &entire_insn, " (number->string (/ max-bitsize 8)) ");
 \n"
 
        decode-code
@@ -232,10 +234,11 @@ int idaapi ana( void )
      (gen-c-copyright "@ARCH@ IDP instructions"
         CURRENT-COPYRIGHT CURRENT-PACKAGE)
       "\
-#include \"cgen.h\"
-#include <bytes.hpp>
 #include \"@arch@.hpp\"
 
+ /* The size of an \"int\" needed to hold an instruction word.
+   This is usually 32 bits, but some architectures needs 64 bits.  */
+typedef CGEN_INSN_INT CGEN_INSN_WORD;
   \n"
      (lambda () (/gen-ana-fn all-insn
               (state-decode-assist)

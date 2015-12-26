@@ -7,7 +7,10 @@
     (string-list-map (lambda (opc)
         (let ((order (insn-op-order insn (op:sem-name opc))))
           (logit 3 "in-op " (number->string order) ": " (op:sem-name opc) "\n")
-          (string-append "CF_USE" (number->string order))
+          (if (>= order 0)
+            (string-append "CF_USE" (number->string (+ order 1)))
+            ""
+          )
         )
       )
       (filter (lambda (val) 
@@ -29,7 +32,10 @@
     (string-list-map (lambda (opc)
         (let ((order (insn-op-order insn (op:sem-name opc))))
           (logit 3 "out-op " (number->string order) ": " (op:sem-name opc) "\n")
-          (string-append "CF_CHG" (number->string order))
+          (if (>= order 0)
+            (string-append "CF_CHG" (number->string (+ order 1)))
+            ""
+          )
         )
       )
       (filter (lambda (val) 
@@ -102,6 +108,19 @@
     )
 )
 
+; Return the maximum number of operand instances used by any insn.
+; If not generating the operand instance table, use a heuristic.
+
+(define (max-operand-instances)
+  (if /opcodes-build-operand-instance-table?
+      (apply max
+       (map (lambda (insn)
+        (+ (length (sfmt-in-ops (insn-sfmt insn)))
+           (length (sfmt-out-ops (insn-sfmt insn)))))
+      (current-insn-list)))
+      6) ; TODO: Error if > 6
+)
+
 ; Entry point.
 
 (define (ins.cpp)
@@ -119,9 +138,7 @@
    (gen-c-copyright "@ARCH@ IDP instructions"
       CURRENT-COPYRIGHT CURRENT-PACKAGE)
    "\
-#include <ida.hpp>
-#include <idp.hpp>
-#include \"ins.hpp\"
+#include \"@arch@.hpp\"
 \n"
    -gen-insn-list
    )

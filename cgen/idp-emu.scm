@@ -55,7 +55,7 @@
 
 (define (/hw-cxmake-emu-get hw estate mode index selector order)
   (cx:make mode
-    "({ break; 0 })"
+    "({ break; 0; })"
   )
 )
 
@@ -283,11 +283,22 @@
 ; Similarily, disable all c-calls
 
 (define (s-c-call estate mode name . args)
-  (cx:make mode "")
+  (cx:make mode 
+    ; If the mode is VOID, this is a statement.
+    ; Otherwise it's an expression.
+    ; ??? Bad assumption!  VOID expressions may be used
+    ; within sequences without local vars, which are translated
+    ; to comma-expressions.
+    (if (or (mode:eq? 'DFLT mode) ;; FIXME: can't get DFLT anymore
+      (mode:eq? 'VOID mode))
+      ""
+      "({ break; 0; })" ; using the result taints our analysis
+    )
+  )
 )
 
 (define (s-c-raw-call estate mode name . args)
-  (cx:make mode "")
+  (s-c-call estate mode name args)
 )
 
 ; Return C code to perform the semantics of INSN.
@@ -327,8 +338,8 @@
      ; The address of this insn, needed by extraction and emu code.
      ; Note that the address recorded in the cpu state struct is not used.
      ; For faster engines that copy will be out of date.
-     "  PCADDR pc = cmd.ea;\n"
-     "  PCADDR npc = pc + " (number->string insn-len) ";\n"
+     "  ea_t pc = cmd.ea;\n"
+     "  ea_t npc = pc + " (number->string insn-len) ";\n"
      "  ea_t val;\n"
      "  do\n"
      "  {\n"
@@ -400,10 +411,7 @@
         copyright-red-hat package-red-hat-simulators)
      "\
 
-#include \"cgen.h\"
-#include <idp.hpp>
-#include <ua.hpp>
-#include <xref.hpp>
+#include \"@arch@.hpp\"
 \n"
      (/gen-all-emu-fns insns)
      "\n"

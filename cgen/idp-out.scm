@@ -47,7 +47,7 @@
     (let ((fn (send operand 'gen-function-name 'print))) 
       (if fn
         (string-append
-          "      out_" fn "(x);\n"
+          "      out_" fn "(x, pc);\n"
         )
         (string-append
           "      OutValue(x, "
@@ -178,7 +178,7 @@
               result
               (if first 
                 (-gen-mnem-out insn #f)
-                (string-append "    out_symbol('" (string-take1 syn) "')\n")
+                (string-append "    out_symbol('" (string-take1 syn) "');\n")
               )
             )
             #f
@@ -200,7 +200,7 @@
             (lambda (op)
               (let ((fn (send op 'gen-function-name 'print)))
                 (if fn
-                  (string-append "extern void out_" fn "(op_t &x, PCADDR pc);\n")
+                  (string-append "extern void out_" fn "(op_t &x, ea_t pc);\n")
                   ""
                 )
               )
@@ -222,11 +222,24 @@
   )
 )
 
+; Generate @arch@_data() function
+; TODO: put code here
+
+(define (-gen-outdata)
+  (string-list
+    "void idaapi @arch@_data(ea_t ea)\n"
+    "{\n"
+    "  gl_name = 1;\n"
+    "  intel_data(ea);\n"
+    "}\n\n"
+  )
+)
+
 ; Generate outop() function
 
 (define (-gen-outop)
   (string-list
-    "static bool cgen_outop(op_t &x, uint16 opindex, PCADDR pc)\n"
+    "static bool cgen_outop(op_t &x, uint16 opindex, ea_t pc)\n"
     "{\n"
     "  switch (opindex)\n"
     "  {\n"
@@ -237,7 +250,7 @@
     "}\n\n"
     "bool idaapi outop(op_t &x)\n"
     "{\n"
-    "  return cgen_outop(x, x.specval_shorts.low, x.ea);\n"
+    "  return cgen_outop(x, x.cgen_optype, cmd.ea);\n"
     "}\n\n"
   )
 )
@@ -291,13 +304,12 @@
      (gen-c-copyright "@ARCH@ IDP output"
         CURRENT-COPYRIGHT CURRENT-PACKAGE)
       "\
-#include \"cgen.h\"
-#include <bytes.hpp>
 #include \"@arch@.hpp\"
 
   \n"
      -gen-special-print-stubs
      "\n"
+     -gen-outdata
      -gen-outop
      (-gen-out all-insn)
      )

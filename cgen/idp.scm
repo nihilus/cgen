@@ -58,6 +58,30 @@
   *UNSPECIFIED*
 )
 
+
+; Create the virtual insns.
+
+(define (/create-virtual-insns!)
+  (let ((all (all-isas-attr-value))
+  (context (make-prefix-context "virtual insns"))
+  ;; Record as a pair so /virtual-insn-add! can update it.
+  (ordinal (cons #f -1)))
+    (/virtual-insn-add!
+     ordinal
+     (insn-read context
+    '(name x-invalid)
+    '(comment "invalid insn handler")
+    `(attrs VIRTUAL (ISA ,@all))
+    '(syntax "--invalid--")
+    (list 'semantics (list 'c-code 'VOID (string-append "\
+  {
+    break;
+  }
+")))
+    ))
+    )
+)
+
 ; IDP init,finish,analyzer support.
 
 ; Initialize any opcodes specific things before loading the .cpu file.
