@@ -9,6 +9,7 @@
 
 (define (load-files srcdir)
   (load (string-append srcdir "/read.scm"))
+  (load (string-append srcdir "/opcodes.scm"))
   (load (string-append srcdir "/utils-sim.scm"))
   (load (string-append srcdir "/sim.scm"))
   (load (string-append srcdir "/sim-decode.scm"))
@@ -19,6 +20,7 @@
   (load (string-append srcdir "/idp-emu.scm"))
   (load (string-append srcdir "/idp-ana.scm"))
   (load (string-append srcdir "/idp-ins.scm"))
+  (load (string-append srcdir "/idp-out.scm"))
   (load (string-append srcdir "/idp-reg.scm"))
 )
 
@@ -36,7 +38,7 @@
    (list "-J" "file" "generate ins.hpp in <file>"
 	 #f
 	 (lambda (arg) (file-write arg ins.hpp)))
-   (list "-H" "file" "generate $arch.hpp in <file>"
+   (list "-H" "file" "generate @arch@.hpp in <file>"
 	 #f
 	 (lambda (arg) (file-write arg arch.hpp)))
    (list "-O" "file" "generate out.cpp in <file>"
