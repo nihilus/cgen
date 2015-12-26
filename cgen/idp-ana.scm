@@ -25,7 +25,7 @@
         (string-upcase (hw-enum self)) "_BASE + "
         (gen-extracted-ifld-value (op-ifield op))
         ";\n"
-        "    " cmd-op ".specval_shorts.low = @ARCH@_OPERAND_"
+        "    " cmd-op ".cgen_optype = @ARCH@_OPERAND_"
         (string-upcase (gen-sym op))
         ";\n"
       )
@@ -68,7 +68,7 @@
         "    " cmd-op ".value = "
         (gen-extracted-ifld-value (op-ifield op))
         ";\n"
-        "    " cmd-op ".specval_shorts.low = @ARCH@_OPERAND_"
+        "    " cmd-op ".cgen_optype = @ARCH@_OPERAND_"
         (string-upcase (gen-sym op))
         ";\n"
       )

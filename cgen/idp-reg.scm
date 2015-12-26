@@ -39,23 +39,36 @@
     )
 )
 
-(define (-gen-all-reg-list)
+(define (-gen-all-reg-list hw-list)
   (let ((counter 0))
     (apply append
       (map (lambda (hw)
-        (let* ((decls (send hw 'gen-reg-list)))
-          (if (not (null? decls))
-            (let ((len (length decls)))
-              (logit 3 "found register list " (->string decls) "\n")
-              (set! decls (cons (string-append "#define REGS_" (string-upcase (hw-enum hw)) "_BASE " (number->string counter) "\n") decls))
-              (set! counter (+ counter len))
-              decls
-            )
-            '()
-          )
-        ))
-      (current-hw-list))
+          (send hw 'gen-reg-list)
+        )
+      hw-list)
     )
+  )
+)
+
+(define (-gen-reg-base-defs hw-list)
+  (let ((counter 0)
+    (defs '()))
+      (append
+        (map (lambda (hw)
+          (let* ((decls (send hw 'gen-reg-list)))
+            (if (not (null? decls))
+              (let ((len (length decls))
+                (idx counter))
+                (logit 3 "found register list " (->string decls) "\n")
+                (set! counter (+ counter len))
+                (string-append "#define REGS_" (string-upcase (hw-enum hw)) "_BASE " (number->string idx) "\n")
+              )
+              ""
+            )
+          ))
+          hw-list)
+        (string-list "#define REGS_COUNT " (number->string counter) "\n")
+      )
   )
 )
 
@@ -76,12 +89,70 @@
    (gen-c-copyright "@ARCH@ IDP instructions"
       CURRENT-COPYRIGHT CURRENT-PACKAGE)
    "\
-#include <ida.hpp>
-#include <idp.hpp>
+/* This file is only to be included by whoever defines LPH! */
 
 static const char *const RegNames[] =
 {\n"
-    -gen-all-reg-list
+    (-gen-all-reg-list (current-hw-list))
     "};\n"
+   )
+)
+
+(define (arch.hpp)
+  (logit 1 "Generating @arch@.hpp ...\n")
+
+  ;(sim-analyze-insns!)
+
+  ; Turn parallel execution support on if cpu needs it.
+  ;(set-with-parallel?! (state-parallel-exec?))
+
+  ; Tell the rtx->c translator we are the simulator.
+  ;(rtl-c-config! #:rtl-cover-fns? #t)
+
+  (string-write
+   (gen-c-copyright "@ARCH@ IDP hardware defines"
+      CURRENT-COPYRIGHT CURRENT-PACKAGE)
+   "\
+#ifndef __@ARCH@_HPP
+#define __@ARCH@_HPP
+
+#include <ida.hpp>
+#include <idp.hpp>
+#include <ua.hpp>
+#include <name.hpp>
+#include <auto.hpp>
+#include <bytes.hpp>
+#include <queue.hpp>
+#include <lines.hpp>
+#include <loader.hpp>
+#include <offset.hpp>
+#include <segment.hpp>
+#include <kernwin.hpp>
+#include \"ins.hpp\"
+
+/* cgen arch name for cgen.h */
+#define CGEN_ARCH @arch@
+
+/* for referring to operand type in cmd */
+#define cgen_optype specval_shorts.low
+
+/* Offsets for register names by cgen hw name */
+\n"
+    (-gen-reg-base-defs (current-hw-list))
+    gen-hw-decls
+    gen-operand-decls
+    "\
+/* cgen.h must be included after all that decls */
+#include \"cgen.h\"
+
+/* IDP exports */
+
+int  idaapi ana( void );
+int  idaapi emu( void );
+void idaapi out( void );
+bool idaapi outop( op_t &op );
+void idaapi @arch@_data(ea_t ea);
+
+#endif\n"
    )
 )
