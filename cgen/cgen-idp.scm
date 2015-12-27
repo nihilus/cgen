@@ -7,6 +7,10 @@
 
 ; Load the various support routines.
 
+; Ths order here is VERY IMPORTANT as some files overwrite certain functions
+; and other files expect those functions to be overwritten (while other 
+; files expect them to NOT be overwritten)
+
 (define (load-files srcdir)
   (load (string-append srcdir "/read.scm"))
   (load (string-append srcdir "/opcodes.scm"))
@@ -17,8 +21,8 @@
   (load (string-append srcdir "/desc.scm"))
   (load (string-append srcdir "/desc-cpu.scm"))
   (load (string-append srcdir "/idp.scm"))
-  (load (string-append srcdir "/idp-emu.scm"))
   (load (string-append srcdir "/idp-ana.scm"))
+  (load (string-append srcdir "/idp-emu.scm"))
   (load (string-append srcdir "/idp-ins.scm"))
   (load (string-append srcdir "/idp-out.scm"))
   (load (string-append srcdir "/idp-arch.scm"))

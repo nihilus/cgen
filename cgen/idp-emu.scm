@@ -32,9 +32,8 @@
 (define (/hw-gen-emu-set-quiet-pc self estate mode index selector newval order . options)
   (if (not (send self 'pc?)) (error "Not a PC:" self))
   (string-append
-    "ua_add_cref(0, npc + "
-    (cx:c newval)
-    ", InstrIsSet(cmd.itype, CF_CALL) ? fl_CN : fl_JN);\n"
+    "{ " (mode:c-type mode) " val = " (cx:c newval) "; "
+    "if (valid) ua_add_cref(0, npc + val, InstrIsSet(cmd.itype, CF_CALL) ? fl_CN : fl_JN); }\n"
   )
 )
 
@@ -55,7 +54,7 @@
 
 (define (/hw-cxmake-emu-get hw estate mode index selector order)
   (cx:make mode
-    "({ break; 0; })"
+    "[&valid](){ valid = 0; return 0; }()"
   )
 )
 
@@ -85,9 +84,11 @@
        (if (not default-selector?) (error "selector not implemented"))
        (cx:make mode
          (string-append 
-            "({ ua_add_dref(0, "
+            "[&valid](){ "
+            (mode:c-type mode)
+            " val = " 
             (/gen-hw-index index estate)
-            " , dr_R); 0; })\n"
+            "; if (valid) ua_add_dref(0, val, dr_R); return 0; }()\n"
          )
        )
    )
@@ -103,9 +104,9 @@
       (default-selector? (hw-selector-default? selector)))
        (if (not default-selector?) (error "selector not implemented"))
        (string-append 
-          "ua_add_dref(0, "
+          "{ " (mode:c-type mode) " val = "
           (/gen-hw-index index estate)
-          " , dr_W);\n"
+          "; if (valid) ua_add_dref(0, val, dr_W); }\n"
        )
    )
  )
@@ -257,44 +258,56 @@
 ; Since we wish to map all possible code paths, we strip out all conditionals 
 ; and turn them into sequences. The user must manually remove unwanted paths.
 
-(define (s-if estate mode cond then . else)
-  (apply s-sequence
-        (cons estate
-              (cons mode
-              (cons nil (cons then else))))) ; ignore the cond
-)
+(define (disable-gen-conditionals!)
+  (let ((saved '(s-if s-cond s-case s-c-call)))
+    (set! s-if (lambda (estate mode cond then . else)
+      (apply s-sequence
+            (cons estate
+                  (cons mode
+                  (cons nil (cons then else))))) ; ignore the cond
+    ))
 
-(define (s-cond estate mode . cond-code-list)
-  (apply s-sequence
-        (cons estate
-              (cons mode
-              (cons nil
-              (map (lambda (cond) (cadr cond)) cond-code-list)))))
-)
+    (set! s-cond (lambda (estate mode . cond-code-list)
+      (apply s-sequence
+            (cons estate
+                  (cons mode
+                  (cons nil
+                  (map (lambda (cond) (cadr cond)) cond-code-list)))))
+    ))
 
-(define (s-case estate mode test . case-list)
-  (apply s-sequence
-        (cons estate
-              (cons mode
-              (cons nil
-              (map (lambda (cond) (test cadr cond)) case-list)))))
-)
+    (set! s-case (lambda (estate mode test . case-list)
+      (apply s-sequence
+            (cons estate
+                  (cons mode
+                  (cons nil
+                  (map (lambda (cond) (test cadr cond)) case-list)))))
+    ))
 
-; Similarily, disable all c-calls
+    ; Similarily, disable all c-calls
 
-(define (s-c-call estate mode name . args)
-  (cx:make mode 
-    ; If the mode is VOID, this is a statement.
-    ; Otherwise it's an expression.
-    ; ??? Bad assumption!  VOID expressions may be used
-    ; within sequences without local vars, which are translated
-    ; to comma-expressions.
-    (if (or (mode:eq? 'DFLT mode) ;; FIXME: can't get DFLT anymore
-      (mode:eq? 'VOID mode))
-      ""
-      "({ break; 0; })" ; using the result taints our analysis
-    )
+    (set! s-c-call (lambda (estate mode name . args)
+      (cx:make mode 
+        ; If the mode is VOID, this is a statement.
+        ; Otherwise it's an expression.
+        ; ??? Bad assumption!  VOID expressions may be used
+        ; within sequences without local vars, which are translated
+        ; to comma-expressions.
+        (if (or (mode:eq? 'DFLT mode) ;; FIXME: can't get DFLT anymore
+          (mode:eq? 'VOID mode))
+          ""
+          "[&valid](){ valid = 0; return 0; }()" ; using the result taints our analysis
+        )
+      )
+    ))
+    saved
   )
+)
+
+(define (restore-conditionals! saved)
+  (set! s-if (car saved))
+  (set! s-cond (cadr saved))
+  (set! s-case (caddr saved))
+  (set! s-c-call (cadddr saved))
 )
 
 (define (s-c-raw-call estate mode name . args)
@@ -304,22 +317,26 @@
 ; Return C code to perform the semantics of INSN.
 
 (define (gen-emu-code insn)
-  (cond ((insn-compiled-semantics insn)
-   => (lambda (sem)
-        (rtl-c++-parsed VOID sem
-            #:for-insn? #f ; disable tracing
-            #:rtl-cover-fns? #t
-            #:owner insn)))
-  ((insn-canonical-semantics insn)
-   => (lambda (sem)
-        (rtl-c++-parsed VOID sem
-            #:for-insn? #f ; disable tracing
-            #:rtl-cover-fns? #t
-            #:owner insn)))
-  (else
-   (context-error (make-obj-context insn #f)
-      "While generating emu code"
-      "semantics of insn are not canonicalized")))
+  (let ((saved (disable-gen-conditionals!))
+    (res (cond ((insn-compiled-semantics insn)
+     => (lambda (sem)
+          (rtl-c++-parsed VOID sem
+              #:for-insn? #f ; disable tracing
+              #:rtl-cover-fns? #t
+              #:owner insn)))
+    ((insn-canonical-semantics insn)
+     => (lambda (sem)
+          (rtl-c++-parsed VOID sem
+              #:for-insn? #f ; disable tracing
+              #:rtl-cover-fns? #t
+              #:owner insn)))
+    (else
+     (context-error (make-obj-context insn #f)
+        "While generating emu code"
+        "semantics of insn are not canonicalized")))))
+    (restore-conditionals! saved)
+    res
+  )
 )
 
 ; Return definition of C function to perform INSN.
@@ -341,10 +358,10 @@
      "  ea_t pc = cmd.ea;\n"
      "  ea_t npc = pc + " (number->string insn-len) ";\n"
      "  ea_t val;\n"
-     "  do\n"
-     "  {\n"
+     "  int valid = 1;\n"
+     "\n"
      (gen-emu-code insn)
-     "  } while (0);\n"
+     "\n"
      "  if (!InstrIsSet(cmd.itype, CF_STOP))\n"
      "  {\n"
      "    ua_add_cref(0, npc, fl_F);\n"
