@@ -130,8 +130,9 @@ static const char *const RegNames[] =
 #include <kernwin.hpp>
 #include \"ins.hpp\"
 
-/* cgen arch name for cgen.h */
+/* needed for cgen.h */
 #define CGEN_ARCH @arch@
+#define CGEN_SYM(s) @arch@##_cgen_##s
 
 /* for referring to operand type in cmd */
 #define cgen_optype specval_shorts.low
