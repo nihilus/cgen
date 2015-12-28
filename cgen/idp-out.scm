@@ -111,8 +111,10 @@
   (let ((context (make-prefix-context "idp out generation"))
     (syntax (strip-mnemonic #f syntax)))
 
-    (let loop ((syn syntax) (result "") (first #t))
+    (let loop ((syn syntax) (result "") (first? #t))
       (cond 
+        ((and (= (string-length syn) 0) first?) (-gen-mnem-out insn #f)) ; no operands
+
         ((= (string-length syn) 0) result) ; base case
 
         ((char=? #\\ (string-ref syn 0))
@@ -147,7 +149,7 @@
                       (parse-error context "undefined operand " operand syntax)
                     )
                     (loop (string-drop (+ n 1) syn)
-                      (string-append result (if first
+                      (string-append result (if first?
                         (-gen-mnem-out insn op)
                         (-gen-getop-access insn op)
                       ))
@@ -167,7 +169,7 @@
                   (parse-error context "undefined operand " operand syntax)
                 )
                 (loop (string-drop (1+ n) syn)
-                  (string-append result (if first
+                  (string-append result (if first?
                     (-gen-mnem-out insn op)
                     (-gen-getop-access insn op)
                   ))
@@ -194,7 +196,7 @@
         (else (loop (string-drop1 syn)
             (string-append 
               result
-              (if first 
+              (if first? 
                 (-gen-mnem-out insn #f)
                 (string-append "    out_symbol('" (string-take1 syn) "');\n")
               )
