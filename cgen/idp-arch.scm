@@ -1,3 +1,6 @@
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 ; Given a register index, get the name if defined
 (define (-get-reg-name hw idx)
@@ -24,6 +27,7 @@
     )
   )
 )
+
 
 ; Default generate
 
@@ -76,6 +80,7 @@
       )
   )
 )
+
 
 ; Entry point.
 

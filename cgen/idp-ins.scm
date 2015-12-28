@@ -1,3 +1,6 @@
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 ; Finds operands that are marked as 'in-ops' by analysis to be CF_USE
 
@@ -120,6 +123,7 @@
       (current-insn-list)))
       6) ; TODO: Error if > 6
 )
+
 
 ; Entry point.
 

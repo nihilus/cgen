@@ -1,6 +1,6 @@
-; IDP module generator for IDA Pro
-; Copyright (C) 2000, 2009 Red Hat, Inc.
-; This file is part of CGEN.
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 ;
 ; This is a standalone script, we don't load anything until we parse the
 ; -s argument (keeps reliance off of environment variables, etc.).

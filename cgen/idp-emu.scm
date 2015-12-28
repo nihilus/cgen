@@ -1,3 +1,6 @@
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 ; Instruction support.
 
@@ -172,6 +175,7 @@
  (lambda (self estate yes?)
    (error "pc operand skip not implemented"))
 )
+
 
 ; Return <c-expr> object to get the value of an operand.
 ; ESTATE is the current rtl evaluator state.
@@ -255,6 +259,7 @@
      (else
       (/op-gen-emu-set-quiet self estate mode index selector newval order)))))
 )
+
 
 ; Since we wish to map all possible code paths, we strip out all conditionals 
 ; and turn them into sequences. The user must manually remove unwanted paths.
@@ -407,6 +412,7 @@
     )
   )
 )
+
 
 ; Entry point.
 

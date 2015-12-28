@@ -1,3 +1,6 @@
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 ; Instruction field extraction support cont'd.
 ; Hardware support.
@@ -112,6 +115,7 @@
           operands)
      ))
 )
+
 
 ; Return C code that extracts the fields of <sformat> SFMT.
 ;
@@ -297,6 +301,7 @@ int idaapi ana( void )
     out
   ))
 )
+
 
 ; Entry point.
 

@@ -1,3 +1,6 @@
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 (define (-op-in-sfmt? sfmt name)
   (->bool
@@ -97,6 +100,7 @@
    (error "gen-print of address not implemented")
  )
 )
+
 
 ; Strip the mnemonic part from SYNTAX.
 ; (ie: everything up to but not including the first space or '$')
@@ -228,6 +232,7 @@
     )
   )
 )
+
 
 ; Generate special printing stubs
 
@@ -325,6 +330,7 @@
     )
   )
 )
+
 
 ; Entry point.
 

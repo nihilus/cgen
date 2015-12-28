@@ -1,6 +1,6 @@
-; General cpu info generator support.
-; Copyright (C) 2000, 2002, 2005, 2009 Red Hat, Inc.
-; This file is part of CGEN.
+; IDA Processor Module support
+; By Yifan Lu
+; Parts taken from other CGEN files
 
 ; Global state variables.
 
@@ -112,6 +112,7 @@
           )
         (if use-lambda-expr? "; }()" ")")))))))
 )
+
 
 ; Create the virtual insns.
 
@@ -135,6 +136,7 @@
     ))
     )
 )
+
 
 ; IDP init,finish,analyzer support.
 
