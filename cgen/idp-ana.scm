@@ -168,7 +168,8 @@
   ; ??? Make this a parameter later but only if necessary.
 
   (let ((decode-bitsize (apply min (map insn-base-mask-length insn-list)))
-    (max-bitsize (apply max (map insn-base-mask-length insn-list))))
+    (max-bitsize (apply max (map insn-base-mask-length insn-list)))
+    (saved-fn state-base-insn-bitsize))
 
     ; Compute INITIAL-BITNUMS if not supplied.
     ; 0 is passed for the start bit (it is independent of lsb0?)
@@ -179,14 +180,21 @@
                 decode-bitsize
                 lsb0?)))
 
+    ; idk why I have to do this
+    (set! state-base-insn-bitsize
+      (lambda () max-bitsize)
+    )
+
+    ; because yay hard coding stuff
+    (set! APPLICATION 'SID-SIMULATOR)
+
     ; All set.  gen-decoder does the hard part, we just print out the result. 
-    (let ((decode-code (gen-decoder insn-list initial-bitnums
+    (let* ((decode-code (gen-decoder insn-list initial-bitnums
             decode-bitsize
             "    " lsb0?
             (current-insn-lookup 'x-invalid #f)
-            #f)))
-
-      (string-write
+            #f))
+      (out (string-write
        "\
 /* Split the instruction into chunks. stolen from binutils */
 
@@ -282,6 +290,12 @@ int idaapi ana( void )
        "\
 }\n"
        )))
+    ; restore saved state
+    (set! state-base-insn-bitsize saved-fn)
+    (set! APPLICATION 'IDP)
+
+    out
+  ))
 )
 
 ; Entry point.
