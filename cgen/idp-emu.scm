@@ -357,7 +357,6 @@
      ; Note that the address recorded in the cpu state struct is not used.
      ; For faster engines that copy will be out of date.
      "  ea_t pc = cmd.ea;\n"
-     "  ea_t val;\n"
      "  int valid = 1;\n"
      "\n"
      (gen-emu-code insn)
