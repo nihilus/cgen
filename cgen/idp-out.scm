@@ -1,9 +1,19 @@
 
+(define (-op-in-sfmt? sfmt name)
+  (->bool
+    (find-first (lambda (op)
+        (equal? (op:sem-name op) name)
+      )
+    (sfmt-extracted-operands sfmt))
+  )
+)
+
 (define (-gen-getop-access insn operand)
-  (let ((opnum (insn-op-order insn (op:sem-name operand))))
+  (let* ((name (op:sem-name operand))
+      (opnum (insn-op-order insn name)))
     (string-append
-      (if (= opnum -1)
-        (string-append "    out_cgen_operand(x, @ARCH@_OPERAND_" (string-upcase (gen-sym operand)) ", cmd.ea);\n" )
+      (if (or (= opnum -1) (not (-op-in-sfmt? (insn-sfmt insn) name)))
+        (string-append "    cgen_outop(cmd.Op" (number->string (+ opnum 1)) ", @ARCH@_OPERAND_" (string-upcase (gen-sym operand)) ", cmd.ea);\n" )
         (string-append "    out_one_operand(" (number->string opnum) ");\n")
       )
     )
@@ -33,8 +43,13 @@
 (method-make!
  <hw-register> 'gen-print
   (lambda (self operand)
-    (string-append
-      "      out_register(ph.regNames[x.reg]);\n"
+    (let ((fn (send operand 'gen-function-name 'print))) 
+      (if fn
+        (string-append
+          "      out_" fn "(x, pc);\n"
+        )
+        "      out_register(ph.regNames[x.reg]);\n"
+      )
     )
   )
 )
