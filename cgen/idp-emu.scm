@@ -118,10 +118,11 @@
 (method-make!
  <hw-immediate> 'cxmake-emu-get
  (lambda (self estate mode index selector order)
-  (cx:make mode
-    (string-append
-      "cmd.Op" (number->string (+ order 1))
-      ".value"
+  (let ((opstr (string-append "cmd.Op" (number->string (+ order 1)))))
+    (cx:make mode
+      (string-append
+         opstr ".type == o_imm ? " opstr ".value : " opstr ".addr"
+      )
     )
   )
  )
