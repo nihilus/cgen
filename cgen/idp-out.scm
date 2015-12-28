@@ -2,7 +2,6 @@
 (define (-gen-getop-access insn operand)
   (let ((opnum (insn-op-order insn (op:sem-name operand))))
     (string-append
-      "    OutChar(' ');\n"
       (if (= opnum -1)
         (string-append "    out_cgen_operand(x, @ARCH@_OPERAND_" (string-upcase (gen-sym operand)) ", cmd.ea);\n" )
         (string-append "    out_one_operand(" (number->string opnum) ");\n")
@@ -172,6 +171,18 @@
                 )
               )
             )
+          )
+        )
+
+        ; comma becomes comma-space for readability
+        ((char=? #\, (string-ref syn 0))
+          (loop (string-drop1 syn)
+            (string-append
+              result
+              "    out_symbol('" (string-take1 syn) "');\n"
+              "    OutChar(' ');\n"
+            )
+            #f
           )
         )
 
