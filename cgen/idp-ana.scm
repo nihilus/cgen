@@ -172,8 +172,7 @@
   ; ??? Make this a parameter later but only if necessary.
 
   (let ((decode-bitsize (apply min (map insn-base-mask-length insn-list)))
-    (max-bitsize (apply max (map insn-base-mask-length insn-list)))
-    (saved-fn state-base-insn-bitsize))
+    (max-bitsize (apply max (map insn-base-mask-length insn-list))))
 
     ; Compute INITIAL-BITNUMS if not supplied.
     ; 0 is passed for the start bit (it is independent of lsb0?)
@@ -183,11 +182,6 @@
                 8 ; max
                 decode-bitsize
                 lsb0?)))
-
-    ; idk why I have to do this
-    (set! state-base-insn-bitsize
-      (lambda () max-bitsize)
-    )
 
     ; because yay hard coding stuff
     (set! APPLICATION 'SID-SIMULATOR)
@@ -295,7 +289,6 @@ int idaapi ana( void )
 }\n"
        )))
     ; restore saved state
-    (set! state-base-insn-bitsize saved-fn)
     (set! APPLICATION 'IDP)
 
     out
