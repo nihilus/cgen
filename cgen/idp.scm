@@ -59,6 +59,60 @@
 )
 
 
+;; Visual C++ does not support gcc statment expressions
+;; So, we choose instead to use C++11 lambda expressions
+;; Return a <c-expr> node for a `sequence'.
+;; MODE is the mode name.
+
+(define (s-sequence estate mode env . exprs)
+  (let* ((env (rtx-env-make-locals env)) ;; compile env
+   (estate (estate-push-env estate env)))
+
+    (if (or (mode:eq? 'DFLT mode) ;; FIXME: DFLT can't appear anymore
+      (mode:eq? 'VOID mode))
+
+  (cx:make VOID
+     (string-append 
+      ;; ??? do {} while (0); doesn't get "optimized out"
+      ;; internally by gcc, meaning two labels and a loop are
+      ;; created for it to have to process.  We can generate pretty
+      ;; big files and can cause gcc to require *lots* of memory.
+      ;; So let's try just {} ...
+      "{\n"
+      (gen-temp-defs estate env)
+      (string-map (lambda (e)
+        (rtl-c-with-estate estate VOID e))
+            exprs)
+      "}\n"))
+
+  (let ((use-lambda-expr? (/use-gcc-stmt-expr? mode env exprs)))
+    (cx:make mode
+       (string-append
+        (if use-lambda-expr? "[&](){ " "(")
+        (gen-temp-defs estate env)
+        (string-append
+         (string-drop 2
+           (let loop ((items exprs) (res ""))
+             (if (null? items) res
+              (string-append
+               (if use-lambda-expr? "; " ", ")
+               (if (and use-lambda-expr? (= (length items) 1)) "return " "")
+               ;; Strip off gratuitous ";\n" at end of expressions that
+               ;; misguessed themselves to be in statement context.
+               ;; See s-c-call, s-c-call-raw above.
+               (let ((substmt (rtl-c-with-estate estate DFLT (car items))))
+                 (if (and (not use-lambda-expr?)
+               (string=? (string-take -2 substmt) ";\n"))
+                (string-drop -2 substmt)
+                substmt))
+               (loop (cdr items) res)
+              )
+             )
+           )
+          )
+        (if use-lambda-expr? "; }()" ")")))))))
+)
+
 ; Create the virtual insns.
 
 (define (/create-virtual-insns!)
@@ -75,7 +129,7 @@
     '(syntax "--invalid--")
     (list 'semantics (list 'c-code 'VOID (string-append "\
   {
-    break;
+    return;
   }
 ")))
     ))

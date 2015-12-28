@@ -135,6 +135,7 @@
    (/gen-ana-record-args (sfmt-eg-insn sfmt) sfmt)
    "\n"
    ;(gen-undef-field-macro sfmt)
+   "    cmd.itype = itype;\n"
    "    cmd.size = " (number->string (/ (sfmt-length sfmt) 8)) ";\n"
    "    return " (number->string (/ (sfmt-length sfmt) 8)) ";\n"
    "  }\n\n"
@@ -182,18 +183,80 @@
 
       (string-write
        "\
+/* Split the instruction into chunks. stolen from binutils */
+
+static inline uint64_t get_bits (const void *p, int bits, int big_p)
+{
+  const unsigned char *addr = (const unsigned char *) p;
+  uint64_t data;
+  int i;
+  int bytes;
+
+  if (bits % 8 != 0)
+    abort ();
+
+  data = 0;
+  bytes = bits / 8;
+  for (i = 0; i < bytes; i++)
+    {
+      int addr_index = big_p ? i : bytes - i - 1;
+
+      data = (data << 8) | addr[addr_index];
+    }
+
+  return data;
+}
+
+static inline CGEN_INSN_WORD get_insn_value(unsigned char *buf, int length)
+{
+  int big_p = " (if (equal? 'big (cpu-insn-endian (current-cpu))) "1" "0") ";
+  int insn_chunk_bitsize = " (number->string (cpu-insn-chunk-bitsize (current-cpu))) ";
+  CGEN_INSN_WORD value = 0;
+
+  if (insn_chunk_bitsize != 0 && insn_chunk_bitsize < length)
+    {
+      /* We need to divide up the incoming value into insn_chunk_bitsize-length
+   segments, and endian-convert them, one at a time. */
+      int i;
+
+      /* Enforce divisibility. */ 
+      if ((length % insn_chunk_bitsize) != 0)
+  abort ();
+
+      for (i = 0; i < length; i += insn_chunk_bitsize) /* NB: i == bits */
+  {
+    int bit_index;
+    uint64_t this_value;
+
+    bit_index = i; /* NB: not dependent on endianness; opposite of cgen_put_insn_value! */
+    this_value = get_bits (& buf[bit_index / 8], insn_chunk_bitsize, big_p);
+    value = (value << insn_chunk_bitsize) | this_value;
+  }
+    }
+  else
+    {
+      value = get_bits (buf, length, big_p);
+    }
+
+  return value;
+}
+
 /* Analyze the current instruction.  */
 
 int idaapi ana( void )
 {
+  /* temporary buffer */
+  unsigned char buffer[" (number->string (quotient max-bitsize 8)) "];
+
   /* Result of decoder.  */
   @PREFIX@_INSN_TYPE itype;
 
   CGEN_INSN_WORD insn;
   CGEN_INSN_WORD entire_insn;
   ea_t pc;
-  get_data_value(cmd.ea, &insn, " (number->string (/ decode-bitsize 8)) ");
-  get_data_value(cmd.ea, &entire_insn, " (number->string (/ max-bitsize 8)) ");
+  get_data_value(cmd.ea, (uval_t *)buffer, " (number->string (quotient max-bitsize 8)) ");
+  insn = get_insn_value(buffer, " (number->string decode-bitsize) ");
+  entire_insn = get_insn_value(buffer, " (number->string max-bitsize) ");
   pc = cmd.ea;
   {
 \n"
