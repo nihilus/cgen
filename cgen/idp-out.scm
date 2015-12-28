@@ -57,7 +57,11 @@
             "OOF_SIGNED|"
             ""
           )
-          "OOF_NUMBER|OOFW_IMM|OOFS_IFSIGN);\n"
+          (if (or (obj-has-attr? operand 'PCREL-ADDR) (obj-has-attr? operand 'ABS-ADDR))
+            "OOF_ADDR|OOFS_NOSIGN|"
+            "OOF_NUMBER|"
+          )
+          "OOFW_IMM);\n"
         )
       )
     )
