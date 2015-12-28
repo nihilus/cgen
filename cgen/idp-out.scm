@@ -2,7 +2,7 @@
 (define (-gen-getop-access insn operand)
   (let ((opnum (insn-op-order insn (op:sem-name operand))))
     (string-append
-      "    out_symbol(' ');\n"
+      "    OutChar(' ');\n"
       (if (= opnum -1)
         (string-append "    out_cgen_operand(x, @ARCH@_OPERAND_" (string-upcase (gen-sym operand)) ", cmd.ea);\n" )
         (string-append "    out_one_operand(" (number->string opnum) ");\n")
