@@ -313,7 +313,7 @@ int idaapi ana( void )
     (rtl-c-config! #:rtl-cover-fns? #t)
 
     (string-write
-     (gen-c-copyright "@ARCH@ IDP instructions"
+     (gen-c-copyright "@ARCH@ IDP analysis"
         CURRENT-COPYRIGHT CURRENT-PACKAGE)
       "\
 #include \"@arch@.hpp\"

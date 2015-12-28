@@ -91,7 +91,7 @@
   ;(rtl-c-config! #:rtl-cover-fns? #t)
 
   (string-write
-   (gen-c-copyright "@ARCH@ IDP instructions"
+   (gen-c-copyright "@ARCH@ IDP registers"
       CURRENT-COPYRIGHT CURRENT-PACKAGE)
    "\
 /* This file is only to be included by whoever defines LPH! */
@@ -127,6 +127,7 @@ static const char *const RegNames[] =
 #include <name.hpp>
 #include <auto.hpp>
 #include <bytes.hpp>
+#include <frame.hpp>
 #include <queue.hpp>
 #include <lines.hpp>
 #include <loader.hpp>
