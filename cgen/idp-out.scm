@@ -61,18 +61,23 @@
 (method-make!
  <hw-immediate> 'gen-print
   (lambda (self operand)
-    (let ((fn (send operand 'gen-function-name 'print))) 
+    (let ((fn (send operand 'gen-function-name 'print))
+      (addr? (or (obj-has-attr? operand 'PCREL-ADDR) (obj-has-attr? operand 'ABS-ADDR)))) 
       (if fn
         (string-append
           "      out_" fn "(x, pc);\n"
         )
         (string-append
+          (if addr?
+            "      if (!out_name_expr(x, x.addr))\n  "
+            ""
+          )
           "      OutValue(x, "
           (if (eq? (mode:class (elm-get (hw-values self) 'mode)) 'INT)
             "OOF_SIGNED|"
             ""
           )
-          (if (or (obj-has-attr? operand 'PCREL-ADDR) (obj-has-attr? operand 'ABS-ADDR))
+          (if addr?
             "OOF_ADDR|OOFS_NOSIGN|"
             "OOF_NUMBER|"
           )
