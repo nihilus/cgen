@@ -8,14 +8,19 @@
         (kw-values indices))))
         (string-append
           "  \""
+          (->string (elm-get indices 'name-prefix))
           (if kwd
             (->string (car kwd))
-            ""
+            (string-append (->string (obj:name hw)) "-" (number->string idx))
           )
           "\", \n"
         )
       )
-      "  \"\", \n"
+      (string-append 
+        "  \""
+        (string-append (->string (obj:name hw)) "-" (number->string idx))
+        "\", \n"
+      )
     )
   )
 )
@@ -33,7 +38,7 @@
   <hw-register> 'gen-reg-list
     (lambda (self)
       (if (scalar? (hw-type self))
-        '("  \"\", \n") ; single register, no keyword
+        (list (string-append "  \"" (->string (obj:name self)) "\", \n")) ; single register, no keyword
         (map (lambda (idx) (-get-reg-name self idx)) (iota (hw-num-elms self)))
       )
     )
