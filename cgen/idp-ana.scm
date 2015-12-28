@@ -58,14 +58,19 @@
  (lambda (self insn op sfmt local?)
   (let* ((mode (hw-mode self))
     (order (insn-op-order insn (op:sem-name op)))
-    (cmd-op (string-append "cmd.Op" (number->string (+ order 1)))))
+    (cmd-op (string-append "cmd.Op" (number->string (+ order 1))))
+    (pcrel? (obj-has-attr? op 'PCREL-ADDR))
+    (absaddr? (obj-has-attr? op 'ABS-ADDR))
+    )
     (if (>= order 0)
       (string-append 
-        "    " cmd-op ".type = o_imm;\n"
+        "    " cmd-op ".type = "
+        (if pcrel? "o_near" (if absaddr? "o_mem" "o_imm"))
+        ";\n"
         "    " cmd-op ".dtyp = get_dtyp_by_size("
         (number->string (mode:bytes mode))
         ");\n"
-        "    " cmd-op ".value = "
+        "    " cmd-op (if (or pcrel? absaddr?) ".addr = " ".value = ")
         (gen-extracted-ifld-value (op-ifield op))
         ";\n"
         "    " cmd-op ".cgen_optype = @ARCH@_OPERAND_"

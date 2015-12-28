@@ -33,7 +33,7 @@
   (if (not (send self 'pc?)) (error "Not a PC:" self))
   (string-append
     "{ " (mode:c-type mode) " val = " (cx:c newval) "; "
-    "if (valid) ua_add_cref(0, npc + val, InstrIsSet(cmd.itype, CF_CALL) ? fl_CN : fl_JN); }\n"
+    "if (valid) ua_add_cref(0, val, InstrIsSet(cmd.itype, CF_CALL) ? fl_CN : fl_JN); }\n"
   )
 )
 
