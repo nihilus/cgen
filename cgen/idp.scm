@@ -129,7 +129,7 @@
     '(syntax "--invalid--")
     (list 'semantics (list 'c-code 'VOID (string-append "\
   {
-    return;
+    return 0;
   }
 ")))
     ))

@@ -349,7 +349,7 @@
   (insn-len (insn-length-bytes insn)))
     (string-list
      "// ********** " (obj:name insn) ": " (insn-syntax insn) "\n\n"
-     "static void\n"
+     "static int\n"
      "@prefix@_emu_" (gen-sym insn)
      " (void)\n"
      "{\n"
@@ -357,16 +357,12 @@
      ; Note that the address recorded in the cpu state struct is not used.
      ; For faster engines that copy will be out of date.
      "  ea_t pc = cmd.ea;\n"
-     "  ea_t npc = pc + " (number->string insn-len) ";\n"
      "  ea_t val;\n"
      "  int valid = 1;\n"
      "\n"
      (gen-emu-code insn)
      "\n"
-     "  if (!InstrIsSet(cmd.itype, CF_STOP))\n"
-     "  {\n"
-     "    ua_add_cref(0, npc, fl_F);\n"
-     "  }\n"
+     "  return " (number->string insn-len) ";\n"
      "}\n\n"
      ))
 )
@@ -388,19 +384,24 @@
       "// Emulator entry\n"
       "int idaapi emu(void)\n"
       "{\n"
-      " switch (cmd.itype)\n"
-      " {\n"
+      "  int len;"
+      "  switch (cmd.itype)\n"
+      "  {\n"
     )
     (map (lambda (insn)
         (string-append
           "    case " (gen-cpu-insn-enum (current-cpu) insn) ": "
-          "@prefix@_emu_" (gen-sym insn) "(); break;\n"
+          "len = @prefix@_emu_" (gen-sym insn) "(); break;\n"
         )
       )
       insns
     )
     (string-list
-      "    default: break;\n"
+      "    default: len = 0; break;\n"
+      "  }\n"
+      "  if (len && !InstrIsSet(cmd.itype, CF_STOP))\n"
+      "  {\n"
+      "    ua_add_cref(0, cmd.ea+len, fl_F);\n"
       "  }\n"
       "  return 1;\n"
       "}\n"
