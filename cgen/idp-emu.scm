@@ -131,12 +131,16 @@
  )
 )
 
-; TODO: implement this
-
 (method-make!
  <hw-address> 'cxmake-emu-get
  (lambda (self estate mode index selector order)
-   (error "hw-address cxmake-emu-get not implemented")
+  (let ((opstr (string-append "cmd.Op" (number->string (+ order 1)))))
+    (cx:make mode
+      (string-append
+        opstr ".addr"
+      )
+    )
+  )
  )
 )
 
@@ -145,7 +149,13 @@
 (method-make!
  <hw-iaddress> 'cxmake-emu-get
  (lambda (self estate mode index selector order)
-   (error "hw-iaddress cxmake-emu-get not implemented")
+  (let ((opstr (string-append "cmd.Op" (number->string (+ order 1)))))
+    (cx:make mode
+      (string-append
+         opstr ".addr"
+      )
+    )
+  )
  )
 )
 

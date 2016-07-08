@@ -71,7 +71,27 @@
 (method-make!
  <hw-iaddress> 'gen-ana-extract
  (lambda (self insn op sfmt local?)
-   (error "iaddr extraction unimplemented"))
+  (let* ((mode (hw-mode self))
+    (order (insn-op-order insn (op:sem-name op)))
+    (cmd-op (string-append "cmd.Op" (number->string (+ order 1))))
+    )
+    (if (>= order 0)
+      (string-append 
+        "    " cmd-op ".type = o_mem;\n"
+        "    " cmd-op ".dtyp = get_dtyp_by_size("
+        (number->string (mode:bytes mode))
+        ");\n"
+        "    " cmd-op ".addr = "
+        (gen-extracted-ifld-value (op-ifield op))
+        ";\n"
+        "    " cmd-op ".cgen_optype = @ARCH@_OPERAND_"
+        (string-upcase (gen-sym op))
+        ";\n"
+      )
+      ""
+    )
+  )
+ )
 )
 
 ; Extract immediate
