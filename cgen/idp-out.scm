@@ -94,11 +94,23 @@
 ; For addresses, use the values field.  Ignore indices.
 
 ;(method-make-forward! <hw-address> 'values '(gen-print))
-(method-make!
+;(method-make!
  <hw-address> 'gen-print
- (lambda (self operand)
-   (error "gen-print of address not implemented")
- )
+  (lambda (self operand)
+    (let ((fn (send operand 'gen-function-name 'print))
+      (if fn
+        (string-append
+          "      out_" fn "(x, pc);\n"
+        )
+        (string-append
+            "      if (!out_name_expr(x, x.addr))\n  "
+            ""
+          "      OutValue(x, "
+          "OOFW_ADDR);\n"
+        )
+      )
+    )
+  )
 )
 
 

@@ -144,8 +144,6 @@
  )
 )
 
-; TODO: implement this
-
 (method-make!
  <hw-iaddress> 'cxmake-emu-get
  (lambda (self estate mode index selector order)
