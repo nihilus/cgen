@@ -303,7 +303,9 @@ int idaapi ana( void )
   @PREFIX@_INSN_TYPE itype;
 
   CGEN_INSN_WORD insn;
+  CGEN_INSN_WORD base_insn;
   CGEN_INSN_WORD entire_insn;
+
   ea_t pc;
   get_data_value(cmd.ea, (uval_t *)buffer, " (number->string (quotient max-bitsize 8)) ");
   insn = get_insn_value(buffer, " (number->string decode-bitsize) ");
