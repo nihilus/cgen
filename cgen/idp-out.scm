@@ -105,7 +105,7 @@
         (string-append
             "      if (!out_name_expr(x, x.addr))\n  "
             ""
-          "      OutValue(x, OOFW_ADDR|OOFS_NOSIGN|OOF_NUMBER);\n"
+          "      OutValue(x, OOF_ADDR|OOFS_NOSIGN|OOF_NUMBER);\n"
         )
       )
     )
